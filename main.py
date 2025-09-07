@@ -2,7 +2,7 @@ import requests
 import flet as ft 
 import re  
 
-# --- إعدادات الموديل والـ API --
+# --- إعدادات الموديل والـ API ---
 MODEL = "deepseek/deepseek-chat-v3.1:free"
 URL = "https://openrouter.ai/api/v1/chat/completions"
 
