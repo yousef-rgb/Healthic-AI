@@ -1,5 +1,6 @@
 import requests
 import flet as ft 
+import re  
 
 # --- إعدادات الموديل والـ API ---
 MODEL = "deepseek/deepseek-chat-v3-0324"
@@ -13,7 +14,7 @@ SYSTEM_PROMPT = (
     "لو سُئلت عن أي شيء خارج المجال الطبي، رد: 'آسف، لقد صممني يوسف محمد ابراهيم على أن مساعد طبي ولست مخصصًا لهذا المجال.'"
 )
 
-API_KEY = "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"
+API_KEY = "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"
 
 HEADERS = {
     "Authorization": f"Bearer {API_KEY}",
@@ -21,7 +22,7 @@ HEADERS = {
 }
 
 # --- دالة لطلب الإجابة من OpenRouter ---
-def ask_openrouter(question, max_tokens=850, temperature=1.1):
+def ask_openrouter(question, max_tokens=2000, temperature=0.8):
     payload = {
         "model": MODEL,
         "messages": [
@@ -37,30 +38,26 @@ def ask_openrouter(question, max_tokens=850, temperature=1.1):
     data = resp.json()
     return data["choices"][0]["message"]["content"]
 
+# --- تنظيف النص من الرموز ---
+def clean_text(text):
+    # هيشيل كل الرموز الخاصة ويخلي بس الحروف والأرقام والمسافات
+    return re.sub(r"[^\w\s\u0600-\u06FF.,؟!]", "", text)
+
 # --- واجهة Flet ---
 def main(page: ft.Page):
-    page.title = "Chronic Diseases Chatbot"
-    page.bgcolor = "#f2f5f9"
-    page.padding = 0
+    page.title = "Healthic"
+    page.theme_mode = "light"
+    page.padding = 20
+    page.spacing = 15
 
-    # منطقة المحادثة
-    chat = ft.ListView(
-        expand=True,
-        spacing=10,
-        padding=20,
-        auto_scroll=True
-    )
+    chat = ft.ListView(expand=True, spacing=10, padding=10, auto_scroll=True)
 
-    # حقل الإدخال
     user_input = ft.TextField(
-        hint_text="✍️ اكتب سؤالك عن الأمراض المزمنة...",
+        hint_text="✍️ اكتب سؤالك هنا...",
         autofocus=True,
         expand=True,
         border_radius=20,
         filled=True,
-        bgcolor="white",
-        color="black",       # لون النص
-        hint_style=ft.TextStyle(color="black")  # لون الـ hint
     )
 
     def send_question(e):
@@ -72,6 +69,7 @@ def main(page: ft.Page):
         chat.controls.append(
             ft.Row(
                 [
+                    ft.Image(src="user.png", width=24, height=24),
                     ft.Container(
                         content=ft.Text(question, size=16, color="white"),
                         bgcolor="#4a90e2",
@@ -90,15 +88,17 @@ def main(page: ft.Page):
         except Exception as err:
             answer = f"[خطأ] {err}"
 
-        clean_answer = answer.replace("**", "")
+        # تنظيف الرموز من الإجابة
+        clean_answer = clean_text(answer)
 
         # رسالة البوت
         chat.controls.append(
             ft.Row(
                 [
+                    ft.Image(src="bot.png", width=24, height=24),
                     ft.Container(
-                        content=ft.Text(clean_answer, size=16, color="black"),
-                        bgcolor="#e6e6e6",
+                        content=ft.Text(clean_answer, size=16 , color='#0a59da' ),
+                        bgcolor="#e2f7f5",
                         padding=12,
                         border_radius=20,
                         margin=ft.margin.only(right=50),
@@ -108,27 +108,34 @@ def main(page: ft.Page):
             )
         )
 
-        user_input.value = ""
+        user_input.value = ""  # تصفير حقل الإدخال
         page.update()
 
-    # زر الإرسال
-    send_btn = ft.ElevatedButton(
-        text="إرسال",
-        bgcolor="#4a90e2",
-        color="white",
-        on_click=send_question,
-        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=20))
+    send_btn = ft.TextButton(text="إرسال", on_click=send_question)
+
+    def toggle_theme(e):
+        page.theme_mode = "dark" if page.theme_mode == "light" else "light"
+        page.update()
+
+    theme_btn = ft.TextButton("🌓", on_click=toggle_theme)
+
+    header = ft.Row(
+        [
+            ft.Image(src="Healthic.png", width=32, height=32),
+            ft.Text("Healthic", size=22, weight="bold"),
+            theme_btn
+        ],
+        alignment="spaceBetween"
     )
 
-    # بناء الصفحة: شات فوق + input ثابت تحت
     page.add(
         ft.Column(
             [
+                header,
                 chat,
                 ft.Container(
                     content=ft.Row([user_input, send_btn], spacing=10),
                     padding=10,
-                    bgcolor="#f2f5f9",
                 )
             ],
             expand=True
